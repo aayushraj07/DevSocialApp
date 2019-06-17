@@ -4,6 +4,9 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 
 
+//Load Validation
+const validateProfileInput = require('../../validation/Profile');
+
 // //Loada Profile Model 
 const Profile = require('../../models/Profile');
 // //Load User Profile
@@ -24,6 +27,7 @@ router.get('/',passport.authenticate('jwt',{session:false}),(req,res)=>{
 
     const errors = {};
     Profile.findOne({ user: req.user.id })
+    .populate('user',['name','avatar'])
     .then(profile =>{
         if(!profile){
             errors.nonprofile = 'Ther is no profile for this user';
@@ -38,7 +42,15 @@ router.get('/',passport.authenticate('jwt',{session:false}),(req,res)=>{
 //@route POST api/profile
 //@desc Create user profile
 //@access Private
-router.get('/',passport.authenticate('jwt',{session:false}),(req,res)=>{
+router.post('/',passport.authenticate('jwt',{session:false}),(req,res)=>{
+    const { errors, isValid } = validateProfileInput(req.body);
+
+    // Check Validation
+    if (!isValid) {
+      // Return any errors with 400 status
+      return res.status(400).json(errors);
+    }
+
     //Get fields
     const profileFields ={};
     profileFields.user = req.user.id;
@@ -72,8 +84,10 @@ router.get('/',passport.authenticate('jwt',{session:false}),(req,res)=>{
         }else{
             //Create
 
-            //Check if ahndle exists 
-            Profile.findOne({handle: profileFields.handle}).then(profile => {
+            //Check if handle exists 
+            Profile.findOne({handle: profileFields.handle})
+         
+            .then(profile => {
                 if(profile){
                     errors.handle = "Thata handle already exists";
                     res.status(400).json(errors);
